@@ -2,6 +2,7 @@ import os
 import cv2
 import face_recognition
 import psycopg2
+import numpy
 from database import conn
 
 pasta_imagens = "fotos/"
@@ -38,3 +39,18 @@ for arquivo in os.listdir(pasta_imagens):
 
 conn.commit()
 cursor.close()
+
+def buscar_medidas_banco():
+    cursor = conn.cursor()
+    cursor.execute("SELECT nome, medidas_rosto FROM base_facial")
+    registros = cursor.fetchall()
+    cursor.close()
+
+    nomes = []
+    medidas = []
+
+    for nome, medida in registros:
+        nomes.append(nome)
+        medidas.append(numpy.array(medida))
+
+    return nomes, medidas
