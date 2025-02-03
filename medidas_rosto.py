@@ -64,7 +64,7 @@ class MedidasRosto:
         imagem = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
 
         faceLOCs = face_recognition.face_locations(imagem)
-        if not faceLOC:
+        if not faceLOCs:
             print(f"Nenhum rosto detectado em {arquivo}")
             return
         
