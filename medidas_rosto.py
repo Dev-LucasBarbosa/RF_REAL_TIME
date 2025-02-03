@@ -2,55 +2,70 @@ import os
 import cv2
 import face_recognition
 import psycopg2
-import numpy
-from database import conn
+import numpy as np
+from database import ConexaoDB
 
-pasta_imagens = "fotos/"
+class BaseRostos:
+    def __init__(self):
+        self.conexao = ConexaoDB()
+        self.conexao.conectar()
+        self.cursor = self.conexao.cur
 
-cursor = conn.cursor()
+    def inserir_rosto(self, nome, imagem_bin, medidas):
+        sql = "INSERT INTO base_facial (nome, imagem, medidas_rosto) VALUES (%s, %s, %s)"
+        self.cursor.execute(sql, (nome, psycopg2.Binary(imagem_bin), medidas.tolist()))
+        print(f"Imagem {nome} inserida no banco!")
 
-for arquivo in os.listdir(pasta_imagens):
-    if arquivo.lower().endswith(('.jpg', '.jpeg', 'png')):
-        caminho_imagem = os.path.join(pasta_imagens, arquivo)
+    def buscar_medidas_banco(self):  
+        self.cursor.execute("SELECT nome, medidas_rosto FROM base_facial")
+        registros = self.cursor.fetchall()
+        nomes, medidas = [], []
 
+        for nome, medida in registros:
+            nomes.append(nome)
+            medidas.append(np.array(medida))
+
+        return nomes, medidas
+    
+    def commit(self):
+        self.conexao.con.commit()
+
+    def fechar_conexao(self):
+        self.cursor.close()
+        self.conexao.desconectar()
+
+class MedidasRosto:
+    def __init__(self, pasta_imagens = "fotos/"):
+        self.pasta_imagens = pasta_imagens
+        self.db = BaseRostos()
+
+    def processar_imagens(self):
+        for arquivo in os.listdir(self.pasta_imagens):
+            if arquivo.lower().endswith(('.jpg', '.jpeg', 'png')):
+                self.processar_imagens(arquivo)
+        
+        self.db.commit()
+        self.db.fechar_conexao()
+
+    def identifica_medida(self, arquivo):
+        caminho_imagem = os.path.join(self.pasta_imagens, arquivo)
         imagem = face_recognition.load_image_file(caminho_imagem)
         imagem = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
 
-        faceLOC = face_recognition.face_locations(imagem)[0]
+        faceLOCs = face_recognition.face_locations(imagem)
+        if not faceLOC:
+            print(f"Nenhum rosto detectado em {arquivo}")
+            return
+        
+        faceLOC = faceLOCs[0]
         cv2.rectangle(imagem, (faceLOC[3],faceLOC[0]), (faceLOC[1], faceLOC[2]), (0,255,0), 2)
 
         medidas = face_recognition.face_encodings(imagem)
 
-        if len(medidas) > 0:
-            medida = medidas[0]
-
+        if medidas:
+            nome = os.path.splitext(arquivo)[0]
             with open(caminho_imagem, "rb") as imagem_file:
                 imagem_bin = imagem_file.read()
-
-            nome = os.path.splitext(arquivo)[0]
-
-            sql = "INSERT INTO base_facial (nome, imagem, medidas_rosto) VALUES (%s, %s, %s)"
-            cursor.execute(sql, (nome, psycopg2.Binary(imagem_bin), medida.tolist()))
-
-            print(f"Imagem {arquivo} inserida no banco!")
-
+            self.db.inserir_rosto(nome, imagem_bin, medidas[0])
         else:
-            print(f"Nenhum rosto detectado em {arquivo}")
-
-conn.commit()
-cursor.close()
-
-def buscar_medidas_banco():
-    cursor = conn.cursor()
-    cursor.execute("SELECT nome, medidas_rosto FROM base_facial")
-    registros = cursor.fetchall()
-    cursor.close()
-
-    nomes = []
-    medidas = []
-
-    for nome, medida in registros:
-        nomes.append(nome)
-        medidas.append(numpy.array(medida))
-
-    return nomes, medidas
+            print(f"Não foi possível extrair medidas de {arquivo}")
