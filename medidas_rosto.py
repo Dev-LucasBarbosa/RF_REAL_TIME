@@ -11,6 +11,11 @@ class BaseRostos:
         self.conexao.conectar()
         self.cursor = self.conexao.cur
 
+    def rosto_existe(self, nome):
+        sql = "SELECT COUNT(*) FROM base_facial WHERE nome = %s"
+        self.cursor.execute(sql, (nome,))
+        return self.cursor.fetchone()[0] > 0
+
     def inserir_rosto(self, nome, imagem_bin, medidas):
         sql = "INSERT INTO base_facial (nome, imagem, medidas_rosto) VALUES (%s, %s, %s)"
         self.cursor.execute(sql, (nome, psycopg2.Binary(imagem_bin), medidas.tolist()))
