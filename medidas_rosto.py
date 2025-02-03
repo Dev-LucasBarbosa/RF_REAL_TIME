@@ -54,6 +54,12 @@ class MedidasRosto:
 
     def identifica_medida(self, arquivo):
         caminho_imagem = os.path.join(self.pasta_imagens, arquivo)
+        nome = os.path.splitext(arquivo)[0]
+
+        if self.db.rosto_existe(nome):
+            print(f"Imagem {arquivo} já está cadastrada")
+            return
+
         imagem = face_recognition.load_image_file(caminho_imagem)
         imagem = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
 
@@ -68,9 +74,11 @@ class MedidasRosto:
         medidas = face_recognition.face_encodings(imagem)
 
         if medidas:
-            nome = os.path.splitext(arquivo)[0]
             with open(caminho_imagem, "rb") as imagem_file:
                 imagem_bin = imagem_file.read()
+
             self.db.inserir_rosto(nome, imagem_bin, medidas[0])
+            os.remove(caminho_imagem)
+            print(f"Imagem {arquivo} removida da pasta.")
         else:
             print(f"Não foi possível extrair medidas de {arquivo}")
