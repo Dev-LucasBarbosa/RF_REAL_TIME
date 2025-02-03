@@ -47,7 +47,7 @@ class MedidasRosto:
     def processar_imagens(self):
         for arquivo in os.listdir(self.pasta_imagens):
             if arquivo.lower().endswith(('.jpg', '.jpeg', 'png')):
-                self.processar_imagens(arquivo)
+                self.identifica_medida(arquivo)
         
         self.db.commit()
         self.db.fechar_conexao()
