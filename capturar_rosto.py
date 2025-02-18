@@ -4,10 +4,12 @@ from medidas_rosto import BaseRostos
 
 class ReconhecimentoFacial:
     def __init__(self):
+        
         self.classificador = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
         self.captura = cv2.VideoCapture(0)
-        self.captura.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-        self.captura.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+        self.captura.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.captura.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.captura.set(cv2.CAP_PROP_FPS, 60)
 
         self.db = BaseRostos()
         self.nomes_salvos, self.medidas_salvas = self.db.buscar_medidas_banco()
@@ -20,8 +22,7 @@ class ReconhecimentoFacial:
             rostos = self.classificador.detectMultiScale(cinza, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
             for (x, y, w, h) in rostos:
-                rostos_rgb = frame [y:y+h, x:x+w]
-                medida_rosto = face_recognition.face_encodings(rostos_rgb)
+                medida_rosto = face_recognition.face_encodings(frame, [(y, x + w, y + h, x)])
 
                 nome_identificado = "Desconhecido"
 
@@ -36,7 +37,7 @@ class ReconhecimentoFacial:
                             break
                                         
                 cv2.rectangle(frame, (x, y), (x + w, y + w), (0,255,0), 3)
-                cv2.putText(frame, nome_identificado, (x, y - 10),
+                cv2.putText(frame, nome_identificado, (x, y - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
 
             cv2.imshow("Reconhecimento Facial", frame)
